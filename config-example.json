@@ -1,0 +1,9 @@
+{
+	"port": 8000,
+	"localhost_only": true,
+	"check_auth": false,
+	"db_driver": "postgres",
+	"db_connection_string": "postgresql://127.0.0.1:5432",
+	"db_max_connections": 20,
+	"db_batch_size": 200
+}

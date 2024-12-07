@@ -1,0 +1,4 @@
+.vscode
+keys/*.pem
+config.json
+scripts/build.sh
