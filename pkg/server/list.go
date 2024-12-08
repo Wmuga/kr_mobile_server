@@ -15,7 +15,7 @@ func (s *Server) listAll(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := s.service.ListAll(r.Context(), in.Offset)
 	if err != nil {
-		transportError(w, http.StatusBadRequest, err)
+		transportError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -31,7 +31,7 @@ func (s *Server) listToday(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := s.service.ListToday(r.Context(), in.Offset)
 	if err != nil {
-		transportError(w, http.StatusBadRequest, err)
+		transportError(w, http.StatusInternalServerError, err)
 		return
 	}
 

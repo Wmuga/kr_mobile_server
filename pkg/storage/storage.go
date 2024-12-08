@@ -12,6 +12,10 @@ import (
 	"github.com/segmentio/ksuid"
 )
 
+const (
+	pingTimeout = time.Second * 3
+)
+
 type Database struct {
 	db        *sql.DB
 	batchSize int
@@ -22,17 +26,21 @@ type Database struct {
 // connection - строка подключения
 // maxConnections - максимальное число открытых соединений
 // batchSize - максимальный размер пачки
-func New(driver, connection string, maxConnections, batchSize int) (*Database, error) {
+func New(ctx context.Context, driver, connection string, maxConnections, batchSize int) (*Database, error) {
 	db, err := sql.Open(driver, connection)
 	if err != nil {
 		return nil, err
 	}
 	db.SetMaxOpenConns(maxConnections)
 
+	ctx, cancel := context.WithTimeout(ctx, pingTimeout)
+	defer cancel()
+	err = db.PingContext(ctx)
+
 	return &Database{
 		db:        db,
 		batchSize: batchSize,
-	}, nil
+	}, err
 }
 
 func (d *Database) AddPass(ctx context.Context, mac string, time time.Time) (pass *model.PassInfo, err error) {
@@ -40,7 +48,7 @@ func (d *Database) AddPass(ctx context.Context, mac string, time time.Time) (pas
 		uid = ksuid.New().String()
 	)
 
-	_, err = d.db.ExecContext(ctx, sqlAddPass, uid, mac, time)
+	_, err = d.db.ExecContext(ctx, sqlAddPass, uid, time, mac)
 	if err != nil {
 		return nil, fmt.Errorf("error add new pass: %w", err)
 	}

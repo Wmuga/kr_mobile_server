@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"crypto/rsa"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
@@ -19,13 +21,19 @@ import (
 )
 
 func main() {
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
 
 	block, _ := pem.Decode([]byte(keys.PrivateKey))
-	key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	keyInterface, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error decode key", err)
+		os.Exit(1)
+	}
+
+	key, ok := keyInterface.(*rsa.PrivateKey)
+	if !ok {
+		fmt.Fprintf(os.Stderr, "Error wrong key type %t\n", keyInterface)
 		os.Exit(1)
 	}
 
@@ -52,26 +60,33 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger, err := logger.New(cfg.DBDriver, cfg.DBConnectionString)
+	fmt.Println("Parsed config")
+
+	logger, err := logger.New(ctx, cfg.DBDriver, cfg.DBConnectionString)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Cant init logger", configFile, err)
+		fmt.Fprintln(os.Stderr, "Cant init logger", err)
 		os.Exit(1)
 	}
 
-	db, err := storage.New(cfg.DBDriver, cfg.DBConnectionString, cfg.DBMaxConnections, cfg.DBBatchSize)
+	fmt.Println("Init logger")
+
+	db, err := storage.New(ctx, cfg.DBDriver, cfg.DBConnectionString, cfg.DBMaxConnections, cfg.DBBatchSize)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Cant init storage", configFile, err)
+		fmt.Fprintln(os.Stderr, "Cant init storage", err)
 		os.Exit(1)
 	}
+
+	fmt.Println("Init storage")
 
 	logic := service.New(logger, db)
 	serv := server.New(logic, logger, cfg.Port, cfg.LocalhostOnly, cfg.CheckAuth, key)
 	errChan := serv.Start()
+
 	fmt.Println("Start server on ", cfg.Port)
 	select {
 	case err = <-errChan:
 		fmt.Println("error", err)
-	case <-sigChan:
+	case <-ctx.Done():
 		fmt.Println("Stopping")
 		serv.Stop()
 	}

@@ -3,6 +3,7 @@ package storage
 import (
 	"apiserver/pkg/model"
 	"context"
+	"database/sql"
 	"fmt"
 	"strconv"
 	"strings"
@@ -12,14 +13,27 @@ type scanner interface {
 	Scan(dest ...any) error
 }
 
+type PassInfo struct {
+	Name     sql.NullString
+	Position sql.NullString
+	Mac      sql.NullString
+	PassTime sql.NullTime
+}
+
 // scanPassInfo взять текущий PassInfo из сканнера
 func scanPassInfo(scanner scanner) (*model.PassInfo, error) {
-	res := model.PassInfo{}
-	err := scanner.Scan(&res.Name, &res.Position, &res.Name, &res.Position, &res.Mac, &res.PassTime)
+	res := PassInfo{}
+
+	err := scanner.Scan(&res.Name, &res.Position, &res.Mac, &res.PassTime)
 	if err != nil {
 		return nil, err
 	}
-	return &res, nil
+	return &model.PassInfo{
+		Name:     res.Name.String,
+		Position: res.Position.String,
+		Mac:      res.Mac.String,
+		PassTime: res.PassTime.Time,
+	}, nil
 }
 
 func setLimitOffset(sql string, limit, offset int) string {

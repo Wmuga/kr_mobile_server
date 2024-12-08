@@ -15,7 +15,7 @@ func (s *Server) add(w http.ResponseWriter, r *http.Request) {
 	resp, err := s.service.AddPass(r.Context(), in.Mac, in.Time)
 
 	if err != nil {
-		transportError(w, http.StatusBadRequest, err)
+		transportError(w, http.StatusInternalServerError, err)
 		return
 	}
 

@@ -13,10 +13,10 @@ COPY pkg/logger pkg/logger
 COPY pkg/storage pkg/storage
 COPY pkg/service pkg/service
 COPY pkg/server pkg/server
-RUN CGO_ENABLED=0 GOOS=linux go build -o api ./cmd/api/main.go 
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/api ./cmd/api/main.go 
 
 
 FROM alpine:3.21
 WORKDIR /app
-COPY --from=build /app/api api
-CMD ["api", "-c", "config.json"]
+COPY --from=build /app/api /app/api
+CMD ["/app/api", "-c", "config.json"]
