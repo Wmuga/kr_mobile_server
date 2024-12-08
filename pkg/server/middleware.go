@@ -9,6 +9,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -17,6 +18,10 @@ import (
 	"strings"
 
 	"github.com/segmentio/ksuid"
+)
+
+var (
+	ErrUnauthorized = errors.New("unauthorized")
 )
 
 type WriterWrapper struct {
@@ -39,7 +44,7 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 		}
 
 		if len(body) == 0 {
-			transportError(w, http.StatusUnauthorized, err)
+			transportError(w, http.StatusUnauthorized, ErrUnauthorized)
 			return
 		}
 
@@ -50,7 +55,7 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 		}
 
 		if !ok {
-			transportError(w, http.StatusUnauthorized, err)
+			transportError(w, http.StatusUnauthorized, ErrUnauthorized)
 			return
 		}
 
@@ -107,6 +112,10 @@ func (s *Server) checkAuth(body []byte) (bool, error) {
 
 	kvs := make([]kv, 0, len(req))
 	for k, v := range req {
+		if k == "token" {
+			continue
+		}
+
 		kvs = append(kvs, kv{
 			key:   k,
 			value: fmt.Sprint(v),
@@ -133,6 +142,8 @@ func (s *Server) checkAuth(body []byte) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+
+	// s.logger.Info(context.Background(), "hashes", "in", string(hash), "out", string(data))
 
 	return slices.Equal(hash, data), nil
 }

@@ -19,6 +19,7 @@ type PassInfo struct {
 }
 
 type passInfo struct {
+	Mac      string `json:"mac"`
 	Name     string `json:"name"`
 	Position string `json:"position"`
 	PassTime string `json:"pass_time"`
@@ -26,6 +27,7 @@ type passInfo struct {
 
 func (p *PassInfo) MarshalJSON() ([]byte, error) {
 	return json.Marshal(passInfo{
+		Mac:      p.Mac,
 		Name:     p.Name,
 		Position: p.Position,
 		PassTime: p.PassTime.Format(time.RFC3339),
